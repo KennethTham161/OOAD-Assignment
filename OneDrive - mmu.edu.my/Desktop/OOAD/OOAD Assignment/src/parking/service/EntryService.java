@@ -1,25 +1,33 @@
 package parking.service;
 
 import parking.data.DataCenter;
-import parking.model.*; // 导入队友写好的所有类
+import parking.model.*; // Importing all model classes (Car, SUV, etc.)
 import java.util.List;
 import java.util.ArrayList;
-import parking.model.SpotStatus; // <--- 加上这一行
+import parking.model.SpotStatus;
 
+/**
+ * EntryService handles the core business logic for the parking entrance.
+ * It acts as a bridge between the UI (EntryPanel) and the data layer (DataCenter).
+ */
 public class EntryService {
 
     /**
-     * 1. 创建车辆 注意：这里必须使用队友定义的 parking.model.Car 等类
+     * 1. Create a Vehicle instance.
+     * Maps the UI selection string to specific subclass implementations.
+     * * @param plate The raw license plate string from user input.
+     * @param typeStr The vehicle category selected in the UI dropdown.
+     * @return A concrete Vehicle object (Car, Motorcycle, etc.), or null if invalid.
      */
     public Vehicle createVehicle(String plate, String typeStr) {
         if (plate == null || plate.trim().isEmpty()) {
             return null;
         }
 
-        // 确保车牌大写，防止 abc-123 和 ABC-123 被当成两辆车
+        // Normalize plate to uppercase to ensure consistency (e.g., "abc-123" vs "ABC-123")
         String cleanPlate = plate.trim().toUpperCase();
 
-        // 根据下拉菜单的 String，实例化队友的类
+        // Instantiate the appropriate subclass based on the provided type string
         switch (typeStr) {
             case "Car":
                 return new Car(cleanPlate);
@@ -30,54 +38,62 @@ public class EntryService {
             case "Handicapped":
                 return new HandicappedVehicle(cleanPlate);
             default:
+                // Log or handle unknown vehicle types if necessary
                 return null;
         }
     }
 
     /**
-     * 2. 查找可用车位 直接调用队友 DataCenter 写好的方法
+     * 2. Find available parking spots.
+     * Delegates the search to the DataCenter based on vehicle compatibility.
+     * * @param v The vehicle looking for a spot.
+     * @return A list of available ParkingSpot objects.
      */
     public List<ParkingSpot> findAvailableSpots(Vehicle v) {
         try {
-            // DataCenter 应该有一个静态方法 getAvailableSpotsForVehicle
-            // 如果队友的方法名不一样（比如 getSpots），请在这里修改
+            // DataCenter provides a static utility to filter compatible/vacant spots
             return DataCenter.getAvailableSpotsForVehicle(v);
         } catch (Exception e) {
-            System.err.println("Error in DataCenter: " + e.getMessage());
+            // Fail-safe: log error and return an empty list to prevent UI from crashing
+            System.err.println("Error accessing DataCenter: " + e.getMessage());
             e.printStackTrace();
-            return new ArrayList<>(); // 返回空列表防止卡死
+            return new ArrayList<>();
         }
     }
 
     /**
-     * 3. 停车并生成票据
+     * 3. Finalize the parking process and generate a Ticket.
+     * Updates the spot status in the database and creates a record for the session.
+     * * @param v The vehicle being parked.
+     * @param spotId The ID of the spot chosen by the user.
+     * @return The generated Ticket object, or null if the process fails.
      */
     public Ticket parkVehicle(Vehicle v, String spotId) {
-        // 1. 找车位对象
+        // Retrieve the spot object from the data center
         ParkingSpot spot = DataCenter.findSpotById(spotId);
         
-        // 2. 直接停车
         if (spot != null) {
-            
-            // 这一步会把车放进数据库
+            // Update the DataCenter/Database to reflect that the spot is now occupied
             DataCenter.parkVehicle(v, spot);
             
-            // --- 修复点：根据最新的报错修改 ---
-            // 队友的 Ticket 需要: (String plate, String spotId, LocalDateTime time)
-            // 所以我们从对象里把这三个数据提取出来传进去
-            
+            // Extract necessary data for Ticket construction
             String plate = v.getLicensePlate();
             String assignedSpotId = spot.getSpotId();
             java.time.LocalDateTime entryTime = v.getEntryTime();
             
-            // 使用正确的方式创建 Ticket
+            /**
+             * Ticket Constructor Requirement: 
+             * new Ticket(String plate, String spotId, LocalDateTime time)
+             */
             Ticket ticket = new Ticket(plate, assignedSpotId, entryTime); 
             
-            // 保存票据
+            // Persist the ticket record in the DataCenter
             DataCenter.addTicket(ticket);
             
             return ticket;
         }
+        
+        // Return null if the spot was not found or is no longer available
         return null;
     }
 }
