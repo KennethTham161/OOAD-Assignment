@@ -1,6 +1,5 @@
 package parking.model;
 
-// Motorcycle - can park in Compact spots only
 public class Motorcycle extends Vehicle {
 
     public Motorcycle(String licensePlate) {
@@ -9,6 +8,15 @@ public class Motorcycle extends Vehicle {
 
     @Override
     public boolean canParkIn(SpotType spotType) {
-        return spotType == SpotType.COMPACT;
+        
+        if (spotType == SpotType.COMPACT) {
+            return true;
+        }
+        
+        if (spotType == SpotType.RESERVED && this.isVip()) {
+            return true;
+        }
+
+        return false;
     }
 }

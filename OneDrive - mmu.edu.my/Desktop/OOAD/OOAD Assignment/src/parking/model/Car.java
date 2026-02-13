@@ -9,6 +9,14 @@ public class Car extends Vehicle {
 
     @Override
     public boolean canParkIn(SpotType spotType) {
-        return spotType == SpotType.COMPACT || spotType == SpotType.REGULAR;
+        if (spotType == SpotType.COMPACT || spotType == SpotType.REGULAR) {
+            return true;
+        }
+        
+        if (spotType == SpotType.RESERVED && this.isVip()) {
+            return true; 
+        }
+
+        return false;
     }
 }
