@@ -10,12 +10,17 @@ public abstract class Vehicle {
     private LocalDateTime exitTime;  // null if still parked
     private String spotId;           // the spot this vehicle is parked in
 
+    
+    private boolean isVip = false;       // is it reservation/vip?
+    private boolean hasViolation = false; // is it violation
+
     public Vehicle(String licensePlate, VehicleType vehicleType) {
         this.licensePlate = licensePlate;
         this.vehicleType = vehicleType;
         this.entryTime = LocalDateTime.now();
         this.exitTime = null;
         this.spotId = null;
+        // isVip 和 hasViolation 默认为 false，不需要在构造函数里特别写
     }
 
     // Abstract method - each vehicle type says which spot types it can park in
@@ -42,6 +47,14 @@ public abstract class Vehicle {
         return spotId;
     }
 
+    public boolean isVip() {
+        return isVip;
+    }
+
+    public boolean hasViolation() {
+        return hasViolation;
+    }
+
     // Setters
     public void setEntryTime(LocalDateTime entryTime) {
         this.entryTime = entryTime;
@@ -53,6 +66,14 @@ public abstract class Vehicle {
 
     public void setSpotId(String spotId) {
         this.spotId = spotId;
+    }
+ 
+    public void setVip(boolean isVip) {
+        this.isVip = isVip;
+    }
+
+    public void setViolation(boolean hasViolation) {
+        this.hasViolation = hasViolation;
     }
 
     @Override

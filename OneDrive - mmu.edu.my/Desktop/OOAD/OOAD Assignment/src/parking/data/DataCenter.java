@@ -1,13 +1,13 @@
 package parking.data;
 
 import java.util.ArrayList;
+import java.util.List;
 import parking.model.*;
 import parking.strategy.*;
 
 /**
  * DataCenter - Central data storage for the parking lot system.
  * Uses static ArrayLists to store all data in memory.
- * Same pattern as the OOAD Lab Test DataCenter.
  * All methods are static - no need to create an instance.
  */
 public class DataCenter {
@@ -19,16 +19,18 @@ public class DataCenter {
     private static ArrayList<Payment> payments = new ArrayList<>();
     private static ArrayList<Fine> fines = new ArrayList<>();
 
-    // Current fine strategy (default: Fixed)
+    // Current fine strategy (default: Fixed Fine Scheme)
     private static FineStrategy activeFineStrategy = new FixedFineStrategy();
 
-    // ========== SEED DEFAULT DATA ==========
-    // This block runs automatically when the class is first used
+    // ========== INITIALIZATION BLOCK ==========
+    // This block runs automatically when the program starts.
     static {
-        seedParkingLot();
+        System.out.println("DataCenter: Initializing system data...");
+        seedParkingLot(); 
+        System.out.println("DataCenter: Initialization complete. Total spots: " + getTotalSpots());
     }
 
-    // Creates 5 floors with mixed spot types
+    // Creates 5 floors with mixed spot types (Compact, Regular, Handicapped, Reserved)
     private static void seedParkingLot() {
         for (int floor = 1; floor <= 5; floor++) {
             Floor f = new Floor(floor);
@@ -38,14 +40,15 @@ public class DataCenter {
                 for (int spot = 1; spot <= 5; spot++) {
                     SpotType type;
 
-                    // Assign spot types based on spot number
-                    // Spots 1-2: Compact, Spot 3-4: Regular, Spot 5: varies by row
+                    // Assign spot types based on spot number logic:
+                    // Spots 1-2: Compact
+                    // Spots 3-4: Regular
+                    // Spot 5: Row 1 = Handicapped, Row 2 = Reserved
                     if (spot <= 2) {
                         type = SpotType.COMPACT;
                     } else if (spot <= 4) {
                         type = SpotType.REGULAR;
                     } else {
-                        // Spot 5: Row 1 = Handicapped, Row 2 = Reserved
                         if (row == 1) {
                             type = SpotType.HANDICAPPED;
                         } else {
@@ -53,11 +56,17 @@ public class DataCenter {
                         }
                     }
 
+                    // Create the spot. 
+                    // Assuming your ParkingSpot constructor is (int floor, int row, int spot, SpotType type)
+                    // If your constructor takes (String id, SpotType type), you need to format the ID here.
                     ParkingSpot ps = new ParkingSpot(floor, row, spot, type);
+                    
+                    // Add spot to the floor
                     f.addSpot(ps);
                 }
             }
 
+            // Add floor to the parking lot
             parkingLot.addFloor(f);
         }
     }
@@ -76,16 +85,20 @@ public class DataCenter {
         return parkingLot.getFloor(floorNumber);
     }
 
-    // Find a spot by its ID (e.g. "F1-R1-S1")
+    // Find a spot by its ID (e.g., "F1-R1-S1")
     public static ParkingSpot findSpotById(String spotId) {
         return parkingLot.findSpotById(spotId);
     }
 
-    // Get all available spots that a vehicle can park in
+    // Get all available spots that a specific vehicle can park in
     public static ArrayList<ParkingSpot> getAvailableSpotsForVehicle(Vehicle vehicle) {
         ArrayList<ParkingSpot> result = new ArrayList<>();
+        
+        // Loop through all floors and spots
         for (Floor floor : parkingLot.getFloors()) {
             for (ParkingSpot spot : floor.getSpots()) {
+                // Check 1: Is the spot empty?
+                // Check 2: Can this specific vehicle type park here? (Checks logic inside Vehicle class)
                 if (spot.isAvailable() && vehicle.canParkIn(spot.getType())) {
                     result.add(spot);
                 }
@@ -94,7 +107,7 @@ public class DataCenter {
         return result;
     }
 
-    // Get all available spots of a specific type
+    // Get all available spots of a specific type (helper method)
     public static ArrayList<ParkingSpot> getAvailableSpotsByType(SpotType type) {
         ArrayList<ParkingSpot> result = new ArrayList<>();
         for (Floor floor : parkingLot.getFloors()) {
@@ -109,11 +122,14 @@ public class DataCenter {
 
     // ========== VEHICLE METHODS ==========
 
-    // Park a vehicle in a spot
+    // Park a vehicle in a specific spot
     public static void parkVehicle(Vehicle vehicle, ParkingSpot spot) {
-        spot.occupy(vehicle);
-        vehicle.setSpotId(spot.getSpotId());
-        vehicles.add(vehicle);
+        if (spot.isAvailable()) {
+            spot.occupy(vehicle);
+            vehicle.setSpotId(spot.getSpotId());
+            vehicles.add(vehicle); // Add to history list
+            System.out.println("DataCenter: Vehicle " + vehicle.getLicensePlate() + " parked at " + spot.getSpotId());
+        }
     }
 
     // Remove a vehicle from its spot (when exiting)
@@ -123,6 +139,7 @@ public class DataCenter {
             ParkingSpot spot = findSpotById(vehicle.getSpotId());
             if (spot != null) {
                 spot.release();
+                System.out.println("DataCenter: Spot " + spot.getSpotId() + " released.");
             }
         }
     }
@@ -130,19 +147,20 @@ public class DataCenter {
     // Find a currently parked vehicle by license plate
     public static Vehicle findVehicleByPlate(String licensePlate) {
         for (Vehicle v : vehicles) {
-            if (v.getLicensePlate().equals(licensePlate) && v.getExitTime() == null) {
+            // Match plate AND ensure vehicle hasn't exited yet (exitTime is null)
+            if (v.getLicensePlate().equalsIgnoreCase(licensePlate) && v.getExitTime() == null) {
                 return v;
             }
         }
         return null;
     }
 
-    // Get all vehicles (parked + historical)
+    // Get all vehicles (both currently parked and historical)
     public static ArrayList<Vehicle> getVehicles() {
         return vehicles;
     }
 
-    // Get all currently parked vehicles (exit time is null)
+    // Get only currently parked vehicles
     public static ArrayList<Vehicle> getAllParkedVehicles() {
         ArrayList<Vehicle> parked = new ArrayList<>();
         for (Vehicle v : vehicles) {
@@ -163,11 +181,11 @@ public class DataCenter {
         return tickets;
     }
 
-    // Find a ticket by license plate (most recent)
+    // Find the most recent ticket for a license plate
     public static Ticket findTicketByPlate(String licensePlate) {
-        // Search from the end to find the most recent ticket
+        // Search backwards to find the latest entry
         for (int i = tickets.size() - 1; i >= 0; i--) {
-            if (tickets.get(i).getLicensePlate().equals(licensePlate)) {
+            if (tickets.get(i).getLicensePlate().equalsIgnoreCase(licensePlate)) {
                 return tickets.get(i);
             }
         }
@@ -207,7 +225,7 @@ public class DataCenter {
     public static ArrayList<Fine> getUnpaidFines(String licensePlate) {
         ArrayList<Fine> unpaid = new ArrayList<>();
         for (Fine f : fines) {
-            if (f.getLicensePlate().equals(licensePlate) && !f.isPaid()) {
+            if (f.getLicensePlate().equalsIgnoreCase(licensePlate) && !f.isPaid()) {
                 unpaid.add(f);
             }
         }
@@ -226,13 +244,13 @@ public class DataCenter {
     // Mark all fines for a license plate as paid
     public static void markFinesPaid(String licensePlate) {
         for (Fine f : fines) {
-            if (f.getLicensePlate().equals(licensePlate) && !f.isPaid()) {
+            if (f.getLicensePlate().equalsIgnoreCase(licensePlate) && !f.isPaid()) {
                 f.setPaid(true);
             }
         }
     }
 
-    // Get all unpaid fines across all vehicles
+    // Get all unpaid fines across all vehicles (for Admin Report)
     public static ArrayList<Fine> getAllUnpaidFines() {
         ArrayList<Fine> unpaid = new ArrayList<>();
         for (Fine f : fines) {
@@ -253,7 +271,6 @@ public class DataCenter {
         activeFineStrategy = strategy;
     }
 
-    // Get the name of the active fine scheme
     public static String getActiveFineSchemeName() {
         return activeFineStrategy.getSchemeName();
     }
@@ -270,12 +287,10 @@ public class DataCenter {
         return (occupied * 100.0) / total;
     }
 
-    // Get total number of spots
     public static int getTotalSpots() {
         return parkingLot.getTotalSpots();
     }
 
-    // Get total occupied spots
     public static int getTotalOccupied() {
         return parkingLot.getTotalOccupied();
     }
