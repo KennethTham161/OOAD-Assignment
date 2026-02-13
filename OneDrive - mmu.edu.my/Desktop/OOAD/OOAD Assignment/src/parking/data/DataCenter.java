@@ -6,9 +6,9 @@ import parking.model.*;
 import parking.strategy.*;
 
 /**
- * DataCenter - Central data storage for the parking lot system.
- * Uses static ArrayLists to store all data in memory.
- * All methods are static - no need to create an instance.
+ * DataCenter - Central data storage for the parking lot system. Uses static
+ * ArrayLists to store all data in memory. All methods are static - no need to
+ * create an instance.
  */
 public class DataCenter {
 
@@ -26,7 +26,7 @@ public class DataCenter {
     // This block runs automatically when the program starts.
     static {
         System.out.println("DataCenter: Initializing system data...");
-        seedParkingLot(); 
+        seedParkingLot();
         System.out.println("DataCenter: Initialization complete. Total spots: " + getTotalSpots());
     }
 
@@ -60,7 +60,7 @@ public class DataCenter {
                     // Assuming your ParkingSpot constructor is (int floor, int row, int spot, SpotType type)
                     // If your constructor takes (String id, SpotType type), you need to format the ID here.
                     ParkingSpot ps = new ParkingSpot(floor, row, spot, type);
-                    
+
                     // Add spot to the floor
                     f.addSpot(ps);
                 }
@@ -72,7 +72,6 @@ public class DataCenter {
     }
 
     // ========== PARKING LOT METHODS ==========
-
     public static ParkingLot getParkingLot() {
         return parkingLot;
     }
@@ -93,7 +92,7 @@ public class DataCenter {
     // Get all available spots that a specific vehicle can park in
     public static ArrayList<ParkingSpot> getAvailableSpotsForVehicle(Vehicle vehicle) {
         ArrayList<ParkingSpot> result = new ArrayList<>();
-        
+
         // Loop through all floors and spots
         for (Floor floor : parkingLot.getFloors()) {
             for (ParkingSpot spot : floor.getSpots()) {
@@ -121,7 +120,6 @@ public class DataCenter {
     }
 
     // ========== VEHICLE METHODS ==========
-
     // Park a vehicle in a specific spot
     public static void parkVehicle(Vehicle vehicle, ParkingSpot spot) {
         if (spot.isAvailable()) {
@@ -133,14 +131,26 @@ public class DataCenter {
     }
 
     // Remove a vehicle from its spot (when exiting)
-    public static void removeVehicle(String licensePlate) {
-        Vehicle vehicle = findVehicleByPlate(licensePlate);
-        if (vehicle != null) {
-            ParkingSpot spot = findSpotById(vehicle.getSpotId());
-            if (spot != null) {
-                spot.release();
-                System.out.println("DataCenter: Spot " + spot.getSpotId() + " released.");
+    public static void removeVehicle(String plate) {
+        Vehicle v = findVehicleByPlate(plate);
+        if (v == null) {
+            for (Vehicle temp : vehicles) {
+                if (temp.getLicensePlate().equalsIgnoreCase(plate)) {
+                    v = temp;
+                    break;
+                }
             }
+        }
+
+        if (v != null) {
+            ParkingSpot spot = findSpotById(v.getSpotId());
+            if (spot != null) {
+                spot.release(); 
+            }
+            vehicles.remove(v); 
+            System.out.println("DataCenter: Vehicle " + plate + " removed and spot released.");
+        } else {
+            System.out.println("DataCenter: Error - Could not find vehicle " + plate + " to remove.");
         }
     }
 
@@ -172,7 +182,6 @@ public class DataCenter {
     }
 
     // ========== TICKET METHODS ==========
-
     public static void addTicket(Ticket ticket) {
         tickets.add(ticket);
     }
@@ -193,7 +202,6 @@ public class DataCenter {
     }
 
     // ========== PAYMENT METHODS ==========
-
     public static void addPayment(Payment payment) {
         payments.add(payment);
     }
@@ -212,7 +220,6 @@ public class DataCenter {
     }
 
     // ========== FINE METHODS ==========
-
     public static void addFine(Fine fine) {
         fines.add(fine);
     }
@@ -262,7 +269,6 @@ public class DataCenter {
     }
 
     // ========== FINE STRATEGY METHODS ==========
-
     public static FineStrategy getActiveFineStrategy() {
         return activeFineStrategy;
     }
@@ -276,7 +282,6 @@ public class DataCenter {
     }
 
     // ========== REPORTING HELPER METHODS ==========
-
     // Get occupancy rate as a percentage
     public static double getOccupancyRate() {
         int total = parkingLot.getTotalSpots();
