@@ -1,16 +1,37 @@
 package parking.data;
 
 import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
 import parking.model.*;
 import parking.strategy.*;
 
 /**
- * DataCenter - Central data storage for the parking lot system. Uses static
- * ArrayLists to store all data in memory. All methods are static - no need to
- * create an instance.
+ * DataCenter - Central data storage for the parking lot system.
+ * 
+ * DESIGN PATTERN: Singleton
+ * Ensures only ONE instance of DataCenter exists throughout the application.
+ * This guarantees all components share the same data (vehicles, tickets, payments, fines).
+ * The private constructor prevents external instantiation, and getInstance() provides
+ * the single global access point.
  */
 public class DataCenter {
+
+    // ========== SINGLETON PATTERN ==========
+    // The single instance of DataCenter (Eager Initialization)
+    private static final DataCenter instance = new DataCenter();
+
+    // Private constructor - prevents anyone from creating additional instances
+    private DataCenter() {
+        // All data initialization is handled in the static block below
+    }
+
+    /**
+     * Returns the single instance of DataCenter.
+     * This is the global access point for the Singleton pattern.
+     */
+    public static DataCenter getInstance() {
+        return instance;
+    }
 
     // ========== DATA COLLECTIONS ==========
     private static ParkingLot parkingLot = new ParkingLot("University Parking Lot");
@@ -21,6 +42,10 @@ public class DataCenter {
 
     // Current fine strategy (default: Fixed Fine Scheme)
     private static FineStrategy activeFineStrategy = new FixedFineStrategy();
+
+    // Tracks which fine strategy was active when each vehicle entered
+    // Key: license plate (uppercase), Value: the FineStrategy at entry time
+    private static HashMap<String, FineStrategy> entryFineStrategies = new HashMap<>();
 
     // ========== INITIALIZATION BLOCK ==========
     // This block runs automatically when the program starts.
@@ -126,6 +151,10 @@ public class DataCenter {
             spot.occupy(vehicle);
             vehicle.setSpotId(spot.getSpotId());
             vehicles.add(vehicle); // Add to history list
+
+            // Record the fine strategy active at entry time (for fair fine calculation at exit)
+            entryFineStrategies.put(vehicle.getLicensePlate().toUpperCase(), activeFineStrategy);
+
             System.out.println("DataCenter: Vehicle " + vehicle.getLicensePlate() + " parked at " + spot.getSpotId());
         }
     }
@@ -147,7 +176,8 @@ public class DataCenter {
             if (spot != null) {
                 spot.release(); 
             }
-            vehicles.remove(v); 
+            vehicles.remove(v);
+            entryFineStrategies.remove(plate.toUpperCase()); // Clean up entry strategy record
             System.out.println("DataCenter: Vehicle " + plate + " removed and spot released.");
         } else {
             System.out.println("DataCenter: Error - Could not find vehicle " + plate + " to remove.");
@@ -271,6 +301,13 @@ public class DataCenter {
     // ========== FINE STRATEGY METHODS ==========
     public static FineStrategy getActiveFineStrategy() {
         return activeFineStrategy;
+    }
+
+    // Get the fine strategy that was active when a vehicle entered
+    // Falls back to the current active strategy if not found
+    public static FineStrategy getEntryFineStrategy(String licensePlate) {
+        FineStrategy strategy = entryFineStrategies.get(licensePlate.toUpperCase());
+        return strategy != null ? strategy : activeFineStrategy;
     }
 
     public static void setActiveFineStrategy(FineStrategy strategy) {

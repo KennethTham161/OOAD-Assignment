@@ -6,11 +6,7 @@ import javax.swing.border.TitledBorder;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.Duration;
-import parking.data.DataCenter;
-import parking.model.*;
+import parking.service.ReportService;
 
 /**
  * ReportingPanel - Member 5's implementation (Enhanced Version)
@@ -32,8 +28,8 @@ public class ReportingPanel extends JPanel {
     private JLabel lblTotalPayments;
     private JButton btnRefreshAll;
     
-    // Date formatter for display
-    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    // Report generation service
+    private ReportService reportService = new ReportService();
 
     public ReportingPanel() {
         setLayout(new BorderLayout(10, 10));
@@ -348,10 +344,10 @@ public class ReportingPanel extends JPanel {
     }
 
     /**
-     * Loads and displays occupancy report
+     * Loads and displays occupancy report using ReportService
      */
     private void loadOccupancyReport() {
-        double occupancyRate = DataCenter.getOccupancyRate();
+        double occupancyRate = reportService.getOccupancyRate();
         lblOccupancyRate.setText(String.format("%.1f%%", occupancyRate));
         
         // Update color based on occupancy
@@ -363,162 +359,45 @@ public class ReportingPanel extends JPanel {
             lblOccupancyRate.setForeground(new Color(200, 0, 0));
         }
         
-        // Build detailed breakdown
-        StringBuilder sb = new StringBuilder();
-        sb.append("BY FLOOR:\n");
-        sb.append("─────────────────────\n");
-        
-        for (Floor floor : DataCenter.getFloors()) {
-            int floorSpots = floor.getTotalSpots();
-            int floorOccupied = floor.getOccupiedCount();
-            double floorRate = floorSpots > 0 ? (floorOccupied * 100.0 / floorSpots) : 0.0;
-            
-            sb.append(String.format("Floor %d: %2d/%2d (%.0f%%)\n",
-                floor.getFloorNumber(), floorOccupied, floorSpots, floorRate));
-        }
-        
-        sb.append("\nBY SPOT TYPE:\n");
-        sb.append("─────────────────────\n");
-        
-        // Count by spot type
-        int[] spotsByType = new int[SpotType.values().length];
-        int[] occupiedByType = new int[SpotType.values().length];
-        
-        for (Floor floor : DataCenter.getFloors()) {
-            for (ParkingSpot spot : floor.getSpots()) {
-                SpotType type = spot.getType();
-                int index = type.ordinal();
-                spotsByType[index]++;
-                if (!spot.isAvailable()) {
-                    occupiedByType[index]++;
-                }
-            }
-        }
-        
-        for (SpotType type : SpotType.values()) {
-            int index = type.ordinal();
-            int total = spotsByType[index];
-            int occupied = occupiedByType[index];
-            double rate = total > 0 ? (occupied * 100.0 / total) : 0.0;
-            
-            sb.append(String.format("%-11s: %2d/%2d (%.0f%%)\n",
-                type.name(), occupied, total, rate));
-        }
-        
-        txtOccupancyDetails.setText(sb.toString());
+        // Get detailed breakdown from service
+        txtOccupancyDetails.setText(reportService.getOccupancyDetails());
         txtOccupancyDetails.setCaretPosition(0);
     }
 
     /**
-     * Loads and displays revenue report
+     * Loads and displays revenue report using ReportService
      */
     private void loadRevenueReport() {
-        double totalRevenue = DataCenter.getTotalRevenue();
-        int paymentCount = DataCenter.getPayments().size();
-        
-        double parkingFees = 0;
-        double finesCollected = 0;
-        
-        for (Payment payment : DataCenter.getPayments()) {
-            parkingFees += payment.getParkingFee();
-            finesCollected += payment.getFinesPaid();
-        }
-        
-        lblTotalPayments.setText(String.valueOf(paymentCount));
-        lblParkingFees.setText(String.format("RM %.2f", parkingFees));
-        lblFinesCollected.setText(String.format("RM %.2f", finesCollected));
-        lblTotalRevenue.setText(String.format("RM %.2f", totalRevenue));
+        lblTotalPayments.setText(String.valueOf(reportService.getPaymentCount()));
+        lblParkingFees.setText(String.format("RM %.2f", reportService.getTotalParkingFees()));
+        lblFinesCollected.setText(String.format("RM %.2f", reportService.getTotalFinesCollected()));
+        lblTotalRevenue.setText(String.format("RM %.2f", reportService.getTotalRevenue()));
     }
 
     /**
-     * Loads and displays currently parked vehicles
+     * Loads and displays currently parked vehicles using ReportService
      */
     private void loadCurrentVehicles() {
         vehicleTableModel.setRowCount(0);
         
-        var parkedVehicles = DataCenter.getAllParkedVehicles();
-        
-        if (parkedVehicles.isEmpty()) {
-            vehicleTableModel.addRow(new Object[]{
-                "No vehicles currently parked", "", "", "", "", ""
-            });
-        } else {
-            for (Vehicle vehicle : parkedVehicles) {
-                String plate = vehicle.getLicensePlate();
-                String type = vehicle.getVehicleType().name();
-                String spotId = vehicle.getSpotId() != null ? vehicle.getSpotId() : "N/A";
-                String entryTime = vehicle.getEntryTime() != null 
-                    ? vehicle.getEntryTime().format(TIME_FORMATTER) 
-                    : "N/A";
-                
-                String duration = "N/A";
-                String status = "OK";
-                
-                if (vehicle.getEntryTime() != null) {
-                    Duration dur = Duration.between(vehicle.getEntryTime(), LocalDateTime.now());
-                    long hours = dur.toHours();
-                    long minutes = dur.toMinutes() % 60;
-                    duration = String.format("%dh %dm", hours, minutes);
-                    
-                    // Check for violations
-                    if (hours > 24) {
-                        status = "OVERSTAY";
-                    } else if (vehicle.hasViolation()) {
-                        status = "VIOLATION";
-                    }
-                }
-                
-                vehicleTableModel.addRow(new Object[]{
-                    plate, type, spotId, entryTime, duration, status
-                });
-            }
+        for (String[] row : reportService.getCurrentVehiclesData()) {
+            vehicleTableModel.addRow(row);
         }
     }
 
     /**
-     * Loads and displays unpaid fines summary
+     * Loads and displays unpaid fines summary using ReportService
      */
     private void loadUnpaidFinesSummary() {
-        var allUnpaidFines = DataCenter.getAllUnpaidFines();
-        
-        java.util.Set<String> uniquePlates = new java.util.HashSet<>();
-        double totalUnpaid = 0;
-        
-        for (Fine fine : allUnpaidFines) {
-            uniquePlates.add(fine.getLicensePlate());
-            totalUnpaid += fine.getAmount();
-        }
-        
-        lblUnpaidFinesCount.setText(String.valueOf(uniquePlates.size()));
-        lblUnpaidFinesTotal.setText(String.format("RM %.2f", totalUnpaid));
+        lblUnpaidFinesCount.setText(String.valueOf(reportService.getUnpaidFinesVehicleCount()));
+        lblUnpaidFinesTotal.setText(String.format("RM %.2f", reportService.getUnpaidFinesTotal()));
     }
 
     /**
-     * Loads and displays violations summary (NEW)
+     * Loads and displays violations summary using ReportService
      */
     private void loadViolationsSummary() {
-        var parkedVehicles = DataCenter.getAllParkedVehicles();
-        
-        int violationCount = 0;
-        
-        for (Vehicle vehicle : parkedVehicles) {
-            // Check if vehicle is violating
-            if (vehicle.getEntryTime() != null) {
-                Duration dur = Duration.between(vehicle.getEntryTime(), LocalDateTime.now());
-                long hours = dur.toHours();
-                
-                // Overstaying (>24 hours) is a violation
-                if (hours > 24) {
-                    violationCount++;
-                }
-                // Reserved spot violation
-                else if (vehicle.hasViolation()) {
-                    violationCount++;
-                }
-            }
-        }
-        
-        lblViolationCount.setText(String.valueOf(violationCount));
+        lblViolationCount.setText(String.valueOf(reportService.getViolationCount()));
     }
 
     /**

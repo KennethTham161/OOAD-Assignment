@@ -4,11 +4,11 @@ import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.time.format.DateTimeFormatter;
-import java.time.LocalDateTime; // Added for Payment constructor 
 import parking.service.ExitService;
+import parking.service.PaymentProcessor;
 import parking.data.DataCenter;
-import parking.model.Payment;
 import parking.model.PaymentMethod;
+import parking.model.Ticket;
 
 // Vehicle Exit and Payment Panel - Member 4
  
@@ -38,6 +38,7 @@ public class ExitPanel extends JPanel {
     // Logic and calculation service 
     
     private ExitService exitService = new ExitService();
+    private PaymentProcessor paymentProcessor = new PaymentProcessor();
     private double currentTotal = 0;
 
     public ExitPanel() {
@@ -172,46 +173,51 @@ public class ExitPanel extends JPanel {
         });
 
         // Action when "Confirm Payment" is clicked 
+        // Delegates payment processing to PaymentProcessor service
         
         btnPay.addActionListener(e -> {
             String plate = txtPlate.getText().trim();
             if (currentTotal <= 0) return;
 
-            // 1. Permanently record exit timestamp 
-            
-            exitService.finalizeExit(plate); 
-            
-            // 2. Map data to the 9 constructor parameters of Payment.java
-            
-            String ticketId = exitService.getSType(); // Using Spot Type as Ticket ID
-            LocalDateTime inT = exitService.getIn();
-            LocalDateTime outT = exitService.getOut();
-            long hrs = exitService.getHours();
-            double fee = exitService.getFee();
-            double finesPaid = exitService.getFine() + DataCenter.getUnpaidFineTotal(plate);
+            // Capture billing data before processing (which removes the vehicle)
             PaymentMethod method = (PaymentMethod) comboPayment.getSelectedItem();
+            Ticket ticket = DataCenter.findTicketByPlate(plate);
+            String receiptTicketId = (ticket != null) ? ticket.getTicketId() : "N/A";
+            String receiptVType = exitService.getVType();
+            String receiptSType = exitService.getSType();
+            String receiptInTime = exitService.getIn().format(dtf);
+            String receiptOutTime = exitService.getOut().format(dtf);
+            long receiptHours = exitService.getHours();
+            double receiptRate = exitService.getRate();
+            double receiptFee = exitService.getFee();
+            double receiptFine = exitService.getFine();
+            double receiptOldFines = DataCenter.getUnpaidFineTotal(plate);
 
-            // 3. Save payment record using the 9-parameter constructor
-            
-            Payment newPayment = new Payment(
-                plate,        // 1. licensePlate
-                ticketId,     // 2. ticketId
-                inT,          // 3. entryTime
-                outT,         // 4. exitTime
-                hrs,          // 5. hoursParked
-                fee,          // 6. parkingFee
-                finesPaid,    // 7. finesPaid
-                currentTotal, // 8. totalAmount
-                method        // 9. paymentMethod
-            );
-            
-            DataCenter.addPayment(newPayment);
-            
-            // 4. Update system: remove vehicle and clear fines 
-            DataCenter.removeVehicle(plate);
-            DataCenter.markFinesPaid(plate);
-            
-            JOptionPane.showMessageDialog(this, "Payment Successful!");
+            // Process the payment
+            paymentProcessor.processPayment(plate, exitService, method, currentTotal);
+
+            // Build and display the exit receipt
+            String receipt = "========== EXIT RECEIPT ==========\n\n"
+                + "Ticket ID     : " + receiptTicketId + "\n"
+                + "Vehicle Type  : " + receiptVType + "\n"
+                + "Spot Type     : " + receiptSType + "\n"
+                + "Entry Time    : " + receiptInTime + "\n"
+                + "Exit Time     : " + receiptOutTime + "\n"
+                + "Duration      : " + receiptHours + " hour(s)\n"
+                + "-----------------------------------------------\n"
+                + "Hourly Rate   : RM " + String.format("%.2f", receiptRate) + "\n"
+                + "Parking Fee   : RM " + String.format("%.2f", receiptFee)
+                + "  (" + receiptHours + "h x RM " + String.format("%.2f", receiptRate) + ")\n"
+                + "Violation Fine: RM " + String.format("%.2f", receiptFine) + "\n"
+                + "Unpaid Fines  : RM " + String.format("%.2f", receiptOldFines) + "\n"
+                + "-----------------------------------------------\n"
+                + "TOTAL PAID    : RM " + String.format("%.2f", currentTotal) + "\n"
+                + "Payment Method: " + method + "\n"
+                + "==================================\n"
+                + "\nThank you for parking with us!";
+
+            JOptionPane.showMessageDialog(this, receipt,
+                "Payment Successful - Exit Receipt", JOptionPane.INFORMATION_MESSAGE);
             resetUI();
         });
     }

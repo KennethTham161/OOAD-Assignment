@@ -189,6 +189,7 @@ public class EntryPanel extends JPanel {
                 sb.append("\n=========================================\n");
                 sb.append("            OFFICIAL PARKING TICKET       \n");
                 sb.append("=========================================\n");
+                sb.append(" Ticket ID :  ").append(ticket.getTicketId()).append("\n");
                 sb.append(" PARKED AT :  ").append(selectedItem).append("\n"); 
                 sb.append("-----------------------------------------\n");
                 sb.append(" Plate No  :  ").append(currentVehicle.getLicensePlate()).append("\n");

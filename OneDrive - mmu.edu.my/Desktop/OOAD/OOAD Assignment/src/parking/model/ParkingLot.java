@@ -1,9 +1,19 @@
 package parking.model;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 
-// Represents the entire parking lot with multiple floors
-public class ParkingLot {
+/**
+ * Represents the entire parking lot with multiple floors.
+ *
+ * DESIGN PATTERN: Iterator
+ * Implements Iterable<ParkingSpot> so that all parking spots across all floors
+ * can be traversed using a simple for-each loop, without exposing the internal
+ * floor/row/spot structure. The actual iteration logic is in ParkingSpotIterator.
+ *
+ * Usage: for (ParkingSpot spot : parkingLot) { ... }
+ */
+public class ParkingLot implements Iterable<ParkingSpot> {
     private String name;
     private ArrayList<Floor> floors;
 
@@ -72,6 +82,15 @@ public class ParkingLot {
 
     public String getName() {
         return name;
+    }
+
+    /**
+     * Returns an Iterator that traverses all parking spots across all floors.
+     * This is the Iterator Pattern entry point - enables for-each loops over all spots.
+     */
+    @Override
+    public Iterator<ParkingSpot> iterator() {
+        return new ParkingSpotIterator(this);
     }
 
     @Override

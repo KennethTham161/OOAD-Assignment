@@ -148,24 +148,5 @@ Spot ID format: F{floor}-R{row}-S{spot}
 Example: F3-R2-S4 = Floor 3, Row 2, Spot 4 (REGULAR)
 
 
-PROJECT STATUS & TEAM ASSIGNMENTS
----------------------------------
-**Completed by Member 1 (System Architect):**
-✓ Main.java - Entry point fully implemented
-✓ MainFrame.java - CardLayout navigation done
-✓ DataCenter.java - Full data layer with static methods and 50-spot seeding
-✓ All enums and model classes (Vehicle, subclasses, ParkingSpot, Floor, ParkingLot, Ticket, Payment, Fine)
-✓ FineStrategy interface defined
-✓ Build system (compiles and runs with zero dependencies)
-
-**Need implementation by teammates (clean stubs provided):**
-- Member 2 (Vehicle & Entry): EntryPanel.java, EntryService.java
-- Member 3 (Space & Infra): SpotAllocation.java
-- Member 4 (Billing & Fines): ExitPanel.java, ExitService.java, PaymentProcessor.java
-  Plus Fine strategy implementations (currently return 0.0 - just placeholders)
-- Member 5 (Admin & Reports): AdminPanel.java, ReportingPanel.java, ReportService.java
-
-UI panels and services are clean stubs with no comments.
-Everything compiles as-is. Ready for your teammates to implement!
 
 

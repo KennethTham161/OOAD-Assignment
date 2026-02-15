@@ -30,6 +30,9 @@ public class AdminPanel extends JPanel {
     private JLabel lblOccupied;
     private JLabel lblAvailable;
     private JLabel lblOccupancyRate;
+    private JLabel lblRevenue;
+    private JLabel lblParkedVehicles;
+    private JLabel lblUnpaidFines;
     private JButton btnRefresh;
     
     // Time simulation components
@@ -256,10 +259,10 @@ public class AdminPanel extends JPanel {
             TitledBorder.TOP,
             new Font("Arial", Font.BOLD, 14)
         ));
-        panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 200));
+        panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 300));
         
         // Grid for stats
-        JPanel grid = new JPanel(new GridLayout(4, 2, 25, 5));
+        JPanel grid = new JPanel(new GridLayout(7, 2, 25, 5));
         grid.setBorder(new EmptyBorder(20, 25, 15, 25));
         
         Font labelFont = new Font("Arial", Font.PLAIN, 13);
@@ -299,6 +302,32 @@ public class AdminPanel extends JPanel {
         lblOccupancyRate.setFont(new Font("Arial", Font.BOLD, 16));
         lblOccupancyRate.setForeground(new Color(0, 100, 200));
         grid.add(lblOccupancyRate);
+        
+        // Total Revenue
+        JLabel lbl5 = new JLabel("Total Revenue:");
+        lbl5.setFont(labelFont);
+        grid.add(lbl5);
+        lblRevenue = new JLabel("RM 0.00");
+        lblRevenue.setFont(valueFont);
+        lblRevenue.setForeground(new Color(0, 130, 0));
+        grid.add(lblRevenue);
+        
+        // Currently Parked Vehicles
+        JLabel lbl6 = new JLabel("Vehicles Currently Parked:");
+        lbl6.setFont(labelFont);
+        grid.add(lbl6);
+        lblParkedVehicles = new JLabel("0");
+        lblParkedVehicles.setFont(valueFont);
+        grid.add(lblParkedVehicles);
+        
+        // Unpaid Fines
+        JLabel lbl7 = new JLabel("Unpaid Fines:");
+        lbl7.setFont(labelFont);
+        grid.add(lbl7);
+        lblUnpaidFines = new JLabel("0");
+        lblUnpaidFines.setFont(valueFont);
+        lblUnpaidFines.setForeground(new Color(180, 0, 0));
+        grid.add(lblUnpaidFines);
         
         panel.add(grid, BorderLayout.CENTER);
         
@@ -475,8 +504,8 @@ public class AdminPanel extends JPanel {
             message = String.format(
                 "There are currently %d %s parked.\n\n" +
                 "The new fine scheme will apply to:\n" +
-                "- All FUTURE vehicle entries\n" +
-                "- Current vehicles when they exit (if they overstay)\n\n" +
+                "- All FUTURE vehicle entries only\n" +
+                "- Currently parked vehicles will keep their original scheme\n\n" +
                 "Change to: %s?",
                 parkedCount, vehicleWord, schemeName);
         } else {
@@ -539,6 +568,11 @@ public class AdminPanel extends JPanel {
         } else {
             lblOccupancyRate.setForeground(new Color(200, 0, 0));
         }
+        
+        // Update revenue, vehicles, and fines
+        lblRevenue.setText(String.format("RM %.2f", DataCenter.getTotalRevenue()));
+        lblParkedVehicles.setText(String.valueOf(DataCenter.getAllParkedVehicles().size()));
+        lblUnpaidFines.setText(String.valueOf(DataCenter.getAllUnpaidFines().size()));
         
         // Update offset display
         updateOffsetDisplay();

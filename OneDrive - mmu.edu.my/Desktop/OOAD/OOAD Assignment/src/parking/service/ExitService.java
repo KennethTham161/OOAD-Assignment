@@ -10,7 +10,6 @@ import parking.strategy.FineStrategy;
 
  
 public class ExitService {
-    private PaymentProcessor processor = new PaymentProcessor();
     
     // Internal state for billing details display 
     private String vType = "-";
@@ -59,16 +58,22 @@ public class ExitService {
        
         this.rate = spot.getType().getHourlyRate();
         
-        // Exemption: Handicapped vehicles in designated spots
+        // Handicapped vehicle pricing:
+        // - FREE (RM 0/hr) in Handicapped spots (card holder exemption)
+        // - Discounted RM 2/hr in any other spot type
        
-        if (v instanceof HandicappedVehicle && sType.equals("HANDICAPPED")) {
-            this.rate = 0.0;
+        if (v instanceof HandicappedVehicle) {
+            if (sType.equals("HANDICAPPED")) {
+                this.rate = 0.0;   // FREE in handicapped spots
+            } else {
+                this.rate = 2.0;   // Discounted RM 2/hour in all other spots
+            }
         }
         this.fee = this.hours * this.rate;
 
-        // 7. Calculate fines based on strategy and violations
+        // 7. Calculate fines based on the strategy that was active at ENTRY time
        
-        FineStrategy strategy = DataCenter.getActiveFineStrategy();
+        FineStrategy strategy = DataCenter.getEntryFineStrategy(plate);
         this.fine = strategy.calculateFine(this.hours); // Standard overstay fine 
         
         // Penalty for unauthorized use of a reserved spot
