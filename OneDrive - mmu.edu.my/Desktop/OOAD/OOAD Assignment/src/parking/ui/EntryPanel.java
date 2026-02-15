@@ -9,16 +9,12 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.List;
 
-/**
- * EntryPanel provides the User Interface for the parking entrance.
- * Modified to include VIP/Reservation logic and warnings.
- */
 public class EntryPanel extends JPanel {
 
     // --- UI Components ---
     private JTextField txtPlate;            // Input for license plate number
     private JComboBox<String> cmbType;      // Dropdown for vehicle categories
-    private JCheckBox chkVip;               // [NEW] Checkbox for VIP/Reservation status
+    private JCheckBox chkVip;               // Checkbox for VIP/Reservation status
     private JComboBox<String> cmbSpots;     // Dropdown for spots
     private JButton btnFind;                // Button to search
     private JButton btnPark;                // Button to park
@@ -84,9 +80,7 @@ public class EntryPanel extends JPanel {
         btnPark.addActionListener(e -> handlePark());
     }
 
-    /**
-     * Step 1: Create vehicle and find spots
-     */
+    //Step 1: Create vehicle and find spots
     private void handleFind() {
         try {
             txtLog.setText(""); 
@@ -98,26 +92,32 @@ public class EntryPanel extends JPanel {
                 return;
             }
 
-            // Display VIP status in log for verification
-            boolean isVip = chkVip.isSelected();
-            txtLog.append("Processing: " + type + " | Plate: " + plate + "\n");
-            if (isVip) txtLog.append("Note: Customer claims VIP Reservation.\n");
+            // Get the actual VIP status selected by the user
+            boolean isUserClaimingVip = chkVip.isSelected();
             
-            // Create the vehicle using existing service
+            txtLog.append("Processing: " + type + " | Plate: " + plate + "\n");
+            if (isUserClaimingVip) txtLog.append("Note: Customer claims VIP Reservation.\n");
+            
+            // Create the vehicle object
             currentVehicle = entryService.createVehicle(plate, type);
             
             if (currentVehicle == null) {
                 txtLog.append("Error: Failed to create vehicle.\n");
                 return;
             }
-
-            // [IMPORTANT FIXED] Apply VIP status to the vehicle object
-            currentVehicle.setVip(isVip);
+            
+            // 1. To show Reserved spots in the list, we temporarily force VIP status to true.
+            // This ensures the DataCenter includes Reserved spots in the return list.
+            currentVehicle.setVip(true);
 
             txtLog.append("Searching for spots...\n");
 
-            // Fetch spots
+            // Fetch spots (includes Reserved spots due to temporary VIP status)
             List<ParkingSpot> spots = entryService.findAvailableSpots(currentVehicle);
+            
+            // 2. After searching, immediately revert to the user's actual status!
+            // This is crucial so that handlePark() can correctly apply fines/logic later.
+            currentVehicle.setVip(isUserClaimingVip);
             
             cmbSpots.removeAllItems();
             
@@ -129,7 +129,6 @@ public class EntryPanel extends JPanel {
                 txtLog.append("RESULT: Found " + spots.size() + " spots.\n");
                 
                 for (ParkingSpot s : spots) {
-                    // Display format: "ID (Type)" -> e.g., "A1 (Reserved)"
                     String displayText = s.getSpotId() + " (" + s.getType() + ")";
                     cmbSpots.addItem(displayText);
                 }
@@ -140,12 +139,11 @@ public class EntryPanel extends JPanel {
         } catch (Exception e) {
             txtLog.append("\n!!! CRITICAL ERROR !!!\n");
             txtLog.append(e.toString() + "\n");
+            e.printStackTrace(); // Recommended for debugging
         }
     }
 
-    /**
-     * Step 3: Finalize parking with Logic Check
-     */
+    //Step 3: Finalize parking with Logic Check
     private void handlePark() {
         try {
             String selectedItem = (String) cmbSpots.getSelectedItem();
@@ -153,7 +151,7 @@ public class EntryPanel extends JPanel {
 
             String spotId = selectedItem.split(" ")[0]; 
             
-            // --- [NEW LOGIC] Check for Reserved Spot Violation ---
+            //  Check for Reserved Spot Violation 
             boolean isSpotReserved = selectedItem.toLowerCase().contains("reserved");
             boolean hasReservation = chkVip.isSelected();
 
@@ -177,8 +175,7 @@ public class EntryPanel extends JPanel {
                     currentVehicle.setViolation(true); 
                 }
             }
-            // -----------------------------------------------------
-
+            
             txtLog.append("Parking vehicle at " + spotId + "...\n");
             
             Ticket ticket = entryService.parkVehicle(currentVehicle, spotId);
