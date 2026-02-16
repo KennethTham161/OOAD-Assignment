@@ -6,23 +6,7 @@ import parking.data.DataCenter;
 import parking.model.*;
 import parking.strategy.FineStrategy;
 
-/**
- * ParkingFacade - Provides a simplified, unified interface to the parking lot subsystem.
- *
- * DESIGN PATTERN: Facade
- * Hides the complexity of interacting with multiple service classes (EntryService,
- * ExitService, PaymentProcessor, ReportService) and the DataCenter behind a single,
- * easy-to-use interface. Clients can perform complex operations (entry, exit, payment,
- * reporting) through simple method calls without needing to know which services to
- * coordinate or in what order.
- *
- * Without this Facade, clients would need to:
- * - Know about EntryService, ExitService, PaymentProcessor, and ReportService separately
- * - Coordinate calls between multiple services in the correct order
- * - Handle data passing between services manually
- *
- * With this Facade, clients simply call one method for each high-level operation.
- */
+
 public class ParkingFacade {
 
     // Internal services that the Facade coordinates
@@ -111,6 +95,30 @@ public class ParkingFacade {
      */
     public ExitService getExitService() {
         return exitService;
+    }
+
+    // ========== DATA LOOKUP OPERATIONS ==========
+
+    /**
+     * Finds the most recent ticket for a given license plate.
+     * Hides the direct DataCenter dependency from the UI layer.
+     *
+     * @param plate License plate number
+     * @return The Ticket object, or null if not found
+     */
+    public Ticket findTicketByPlate(String plate) {
+        return DataCenter.findTicketByPlate(plate);
+    }
+
+    /**
+     * Gets the total unpaid fine amount for a given license plate.
+     * Hides the direct DataCenter dependency from the UI layer.
+     *
+     * @param plate License plate number
+     * @return Total unpaid fine amount in RM
+     */
+    public double getUnpaidFineTotal(String plate) {
+        return DataCenter.getUnpaidFineTotal(plate);
     }
 
     // ========== ADMIN OPERATIONS ==========

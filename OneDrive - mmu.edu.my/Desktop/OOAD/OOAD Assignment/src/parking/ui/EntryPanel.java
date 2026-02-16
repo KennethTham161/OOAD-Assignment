@@ -3,7 +3,7 @@ package parking.ui;
 import parking.model.ParkingSpot;
 import parking.model.Ticket;
 import parking.model.Vehicle;
-import parking.service.EntryService;
+import parking.service.ParkingFacade;
 
 import javax.swing.*;
 import java.awt.*;
@@ -25,11 +25,11 @@ public class EntryPanel extends JPanel {
     private JTextArea txtLog;               // Console log
     
     // --- Business Logic & State ---
-    private EntryService entryService;      
+    private ParkingFacade facade;      
     private Vehicle currentVehicle;         
 
     public EntryPanel() {
-        this.entryService = new EntryService();
+        this.facade = new ParkingFacade();
         initComponents();
     }
 
@@ -103,21 +103,18 @@ public class EntryPanel extends JPanel {
             txtLog.append("Processing: " + type + " | Plate: " + plate + "\n");
             if (isVip) txtLog.append("Note: Customer claims VIP Reservation.\n");
             
-            // Create the vehicle using existing service
-            currentVehicle = entryService.createVehicle(plate, type);
+            // Create the vehicle and configure VIP status via Facade
+            currentVehicle = facade.createAndConfigureVehicle(plate, type, isVip);
             
             if (currentVehicle == null) {
                 txtLog.append("Error: Failed to create vehicle.\n");
                 return;
             }
 
-            // [IMPORTANT FIXED] Apply VIP status to the vehicle object
-            currentVehicle.setVip(isVip);
-
             txtLog.append("Searching for spots...\n");
 
-            // Fetch spots
-            List<ParkingSpot> spots = entryService.findAvailableSpots(currentVehicle);
+            // Fetch spots via Facade
+            List<ParkingSpot> spots = facade.findAvailableSpots(currentVehicle);
             
             cmbSpots.removeAllItems();
             
@@ -181,7 +178,7 @@ public class EntryPanel extends JPanel {
 
             txtLog.append("Parking vehicle at " + spotId + "...\n");
             
-            Ticket ticket = entryService.parkVehicle(currentVehicle, spotId);
+            Ticket ticket = facade.parkVehicle(currentVehicle, spotId);
             
             if (ticket != null) {
                 // Generate Receipt

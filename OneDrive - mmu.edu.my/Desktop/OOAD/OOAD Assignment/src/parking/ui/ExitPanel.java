@@ -4,9 +4,7 @@ import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.time.format.DateTimeFormatter;
-import parking.service.ExitService;
-import parking.service.PaymentProcessor;
-import parking.data.DataCenter;
+import parking.service.ParkingFacade;
 import parking.model.PaymentMethod;
 import parking.model.Ticket;
 
@@ -35,10 +33,9 @@ public class ExitPanel extends JPanel {
     private JComboBox<PaymentMethod> comboPayment = new JComboBox<>(PaymentMethod.values());
     private JButton btnPay = new JButton("Confirm Payment & Exit");
     
-    // Logic and calculation service 
+    // Logic and calculation service (routed through Facade)
     
-    private ExitService exitService = new ExitService();
-    private PaymentProcessor paymentProcessor = new PaymentProcessor();
+    private ParkingFacade facade = new ParkingFacade();
     private double currentTotal = 0;
 
     public ExitPanel() {
@@ -152,22 +149,22 @@ public class ExitPanel extends JPanel {
        
         btnSearch.addActionListener(e -> {
             String plate = txtPlate.getText().trim();
-            // Calculation only (Preview) 
-            this.currentTotal = exitService.processExitCalculation(plate);
+            // Calculation only (Preview) via Facade
+            this.currentTotal = facade.calculateExitFees(plate);
             
             if (currentTotal < 0) {
                 JOptionPane.showMessageDialog(this, "Vehicle Not Found!");
             } else {
-                // Update UI labels with service data 
-                lblVType.setText(exitService.getVType());
-                lblSType.setText(exitService.getSType());
-                lblInTime.setText(exitService.getIn().format(dtf));
-                lblOutTime.setText(exitService.getOut().format(dtf));
-                lblDuration.setText(exitService.getMins() + " mins (" + exitService.getHours() + "h)");
-                lblRate.setText("RM " + String.format("%.2f", exitService.getRate()));
-                lblParkingFee.setText("RM " + String.format("%.2f", exitService.getFee()));
-                lblCurrentFine.setText("RM " + String.format("%.2f", exitService.getFine()));
-                lblOldFines.setText("RM " + String.format("%.2f", DataCenter.getUnpaidFineTotal(plate)));
+                // Update UI labels with service data via Facade
+                lblVType.setText(facade.getExitService().getVType());
+                lblSType.setText(facade.getExitService().getSType());
+                lblInTime.setText(facade.getExitService().getIn().format(dtf));
+                lblOutTime.setText(facade.getExitService().getOut().format(dtf));
+                lblDuration.setText(facade.getExitService().getMins() + " mins (" + facade.getExitService().getHours() + "h)");
+                lblRate.setText("RM " + String.format("%.2f", facade.getExitService().getRate()));
+                lblParkingFee.setText("RM " + String.format("%.2f", facade.getExitService().getFee()));
+                lblCurrentFine.setText("RM " + String.format("%.2f", facade.getExitService().getFine()));
+                lblOldFines.setText("RM " + String.format("%.2f", facade.getUnpaidFineTotal(plate)));
                 lblTotal.setText("RM " + String.format("%.2f", currentTotal));
             }
         });
@@ -181,20 +178,20 @@ public class ExitPanel extends JPanel {
 
             // Capture billing data before processing (which removes the vehicle)
             PaymentMethod method = (PaymentMethod) comboPayment.getSelectedItem();
-            Ticket ticket = DataCenter.findTicketByPlate(plate);
+            Ticket ticket = facade.findTicketByPlate(plate);
             String receiptTicketId = (ticket != null) ? ticket.getTicketId() : "N/A";
-            String receiptVType = exitService.getVType();
-            String receiptSType = exitService.getSType();
-            String receiptInTime = exitService.getIn().format(dtf);
-            String receiptOutTime = exitService.getOut().format(dtf);
-            long receiptHours = exitService.getHours();
-            double receiptRate = exitService.getRate();
-            double receiptFee = exitService.getFee();
-            double receiptFine = exitService.getFine();
-            double receiptOldFines = DataCenter.getUnpaidFineTotal(plate);
+            String receiptVType = facade.getExitService().getVType();
+            String receiptSType = facade.getExitService().getSType();
+            String receiptInTime = facade.getExitService().getIn().format(dtf);
+            String receiptOutTime = facade.getExitService().getOut().format(dtf);
+            long receiptHours = facade.getExitService().getHours();
+            double receiptRate = facade.getExitService().getRate();
+            double receiptFee = facade.getExitService().getFee();
+            double receiptFine = facade.getExitService().getFine();
+            double receiptOldFines = facade.getUnpaidFineTotal(plate);
 
-            // Process the payment
-            paymentProcessor.processPayment(plate, exitService, method, currentTotal);
+            // Process the payment via Facade
+            facade.processPayment(plate, method, currentTotal);
 
             // Build and display the exit receipt
             String receipt = "========== EXIT RECEIPT ==========\n\n"
